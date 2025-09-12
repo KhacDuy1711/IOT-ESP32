@@ -51,21 +51,25 @@ iframe {width:100%; height:240px; border:none;align-items: center; border-radius
 <script>
 let ledState = 0;
 let mode = 'manual';
-let writeAPI = "PXW7LEWFTB7KXA3M"; // <-- Thay bằng WRITE API KEY của bạn
+
+// --- API KEY + Channel ---
+let writeAPI = "PXW7LEWFTB7KXA3M"; // <-- WRITE API KEY
+let readAPI = "MG3QHGIIU9UT6SPF";  // <-- READ API KEY
 let channelID = "2651233";
 
-// Hàm gửi dữ liệu lên ThingSpeak (có khóa nút 15s)
+// --- Gửi dữ liệu lên ThingSpeak ---
 function sendToThingSpeak(field, value, btnId) {
   let url = `https://api.thingspeak.com/update?api_key=${writeAPI}&${field}=${value}`;
   fetch(url).then(r => r.text()).then(data => {
     console.log("ThingSpeak response:", data);
     if (data === "0") {
-      alert("⚠️ Gửi thất bại (giới hạn 15s của ThingSpeak). Thử lại sau.");
+      alert("⚠️ Gửi thất bại (giới hạn 15s). Thử lại sau.");
     }
   });
   if (btnId) lockButton(btnId);
 }
 
+// --- Toggle LED ---
 function toggleLED() {
   if(mode === 'manual') {
     ledState = ledState ? 0 : 1;
@@ -74,12 +78,14 @@ function toggleLED() {
   }
 }
 
+// --- Toggle Mode ---
 function toggleMode() {
   mode = (mode === 'manual') ? 'auto' : 'manual';
   updateMode();
   sendToThingSpeak("field4", mode === 'auto' ? 1 : 0, "modeBtn");
 }
 
+// --- Cập nhật LED UI ---
 function updateLED() {
   let btn=document.getElementById('toggleBtn');
   let state=document.getElementById('state');
@@ -92,6 +98,7 @@ function updateLED() {
   }
 }
 
+// --- Cập nhật Mode UI ---
 function updateMode() {
   let btn=document.getElementById('modeBtn');
   let state=document.getElementById('modeState');
@@ -111,7 +118,30 @@ function updateMode() {
   }
 }
 
-// Khóa nút 15s để tránh gửi liên tục
+// --- Đọc trạng thái mới nhất từ ThingSpeak ---
+function fetchThingSpeak() {
+  let url = `https://api.thingspeak.com/channels/${channelID}/feeds/last.json?api_key=${readAPI}`;
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      console.log("ThingSpeak data:", data);
+
+      // LED state (field3)
+      if (data.field3 !== null) {
+        ledState = (data.field3 === "1") ? 1 : 0;
+        updateLED();
+      }
+
+      // Mode (field4)
+      if (data.field4 !== null) {
+        mode = (data.field4 === "1") ? "auto" : "manual";
+        updateMode();
+      }
+    })
+    .catch(err => console.error("Error fetching:", err));
+}
+
+// --- Khóa nút 15s ---
 function lockButton(btnId) {
   let btn = document.getElementById(btnId);
   btn.disabled = true;
@@ -135,6 +165,7 @@ function lockButton(btnId) {
   }, 1000);
 }
 
+// --- Đồng hồ ---
 function updateClock(){
   let now = new Date();
   let hours = String(now.getHours()).padStart(2,'0');
@@ -146,6 +177,10 @@ function updateClock(){
 }
 setInterval(updateClock,1000);
 updateClock();
+
+// --- Gọi API ThingSpeak mỗi 5 giây để đồng bộ ---
+setInterval(fetchThingSpeak, 5000);
+fetchThingSpeak();
 </script>
 </body>
 </html>
