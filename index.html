@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML TEST ESP32</title>
+<style>
+body {font-family: Arial, sans-serif; background: linear-gradient(45deg, #0081C2,#042F60, #0081C2); margin:0;min-height: 100vh; background-attachment: fixed;background-size: cover;padding:20px; color:#333;}
+.container {display:grid; grid-template-columns: 1fr 1fr; gap:20px; max-width:1200px; margin:auto;}
+.card { background:white; border: none;align-items: center; border-radius:20px; padding:20px; box-shadow: -5px 5px 0px #6E8FFF; margin-bottom:20px;}
+.btn {font-size:16px; padding:10px 18px; border:none; border-radius:8px; cursor:pointer; transition:0.3s;}
+#toggleBtn {background:#28a745; color:black;}
+#toggleBtn.on {background:#8B0000; color:white;}
+#toggleBtn:hover {opacity:0.85;}
+#modeBtn {background:#2196F3; color:white;}
+#modeBtn.auto {background:orange;}
+iframe {width:100%; height:240px; border:none;align-items: center; border-radius:10px; margin-top:10px;}
+#clock {font-size:20px; font-weight:normal; color:#222;}
+#clock-date {font-size:20px; font-weight:normal; color:#222;}
+</style>
+</head>
+<body>
+<div class='container'>
+  <div>
+    <div class='card'>
+      <h2>🕒 Ngày tháng & giờ hiện tại</h2>
+      <div id='clock-date'>Loading date...</div>
+      <div id='clock'>Loading time...</div>
+    </div>
+    <div class='card'>
+      <h2>💡 Điều khiển LED</h2>
+      <p>Trạng thái LED: <span id='state'>OFF</span></p>
+      <button id='toggleBtn' class='btn' onclick='toggleLED()'>Nhấn để bật / tắt</button>
+    </div>
+    <div class='card'>
+      <h2>⚙️ Mode</h2>
+      <p>Chế độ: <span id='modeState'>Manual</span></p>
+      <button id='modeBtn' class='btn' onclick='toggleMode()'>Nhấn để đổi Mode</button>
+    </div>
+  </div>
+  <div>
+    <div class='card'>
+      <iframe src='https://thingspeak.com/channels/2637039/charts/1?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=30&title=Nhi%E1%BB%87t+%C4%91%E1%BB%99&type=line'></iframe>
+    </div>
+    <div class='card'>
+      <iframe src='https://thingspeak.com/channels/2637039/charts/2?bgcolor=%23ffffff&color=%23009688&dynamic=true&results=30&title=%C4%90%E1%BB%99+%E1%BA%A9m&type=line'></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+let ledState = 0;
+let mode = 'manual';
+
+// --- API KEY + Channel ---
+let writeAPI = "PXW7LEWFTB7KXA3M"; // <-- WRITE API KEY
+let readAPI = "MG3QHGIIU9UT6SPF";  // <-- READ API KEY
+let channelID = "2651233";
+
+// --- Gửi dữ liệu lên ThingSpeak ---
+function sendToThingSpeak(field, value, btnId) {
+  let url = `https://api.thingspeak.com/update?api_key=${writeAPI}&${field}=${value}`;
+  fetch(url).then(r => r.text()).then(data => {
+    console.log("ThingSpeak response:", data);
+    if (data === "0") {
+      alert("⚠️ Gửi thất bại (giới hạn 15s). Thử lại sau.");
+    }
+  });
+  if (btnId) lockButton(btnId);
+}
+
+// --- Toggle LED ---
+function toggleLED() {
+  if(mode === 'manual') {
+    ledState = ledState ? 0 : 1;
+    updateLED();
+    sendToThingSpeak("field3", ledState, "toggleBtn");
+  }
+}
+
+// --- Toggle Mode ---
+function toggleMode() {
+  mode = (mode === 'manual') ? 'auto' : 'manual';
+  updateMode();
+  sendToThingSpeak("field4", mode === 'auto' ? 1 : 0, "modeBtn");
+}
+
+// --- Cập nhật LED UI ---
+function updateLED() {
+  let btn=document.getElementById('toggleBtn');
+  let state=document.getElementById('state');
+  if(ledState){
+    state.innerText='Đã Bật';
+    btn.classList.add('on');
+  } else {
+    state.innerText='Đã Tắt';
+    btn.classList.remove('on');
+  }
+}
+
+// --- Cập nhật Mode UI ---
+function updateMode() {
+  let btn=document.getElementById('modeBtn');
+  let state=document.getElementById('modeState');
+  let toggleBtn=document.getElementById('toggleBtn');
+  if(mode==='auto'){
+    state.innerText='Auto';
+    btn.classList.add('auto');
+    toggleBtn.disabled=true;
+    toggleBtn.style.opacity=0.5;
+    toggleBtn.style.cursor='not-allowed';
+  } else {
+    state.innerText='Manual';
+    btn.classList.remove('auto');
+    toggleBtn.disabled=false;
+    toggleBtn.style.opacity=1;
+    toggleBtn.style.cursor='pointer';
+  }
+}
+
+// --- Đọc trạng thái mới nhất từ ThingSpeak ---
+function fetchThingSpeak() {
+  let url = `https://api.thingspeak.com/channels/${channelID}/feeds/last.json?api_key=${readAPI}`;
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      console.log("ThingSpeak data:", data);
+
+      // LED state (field3)
+      if (data.field3 !== null) {
+        ledState = (data.field3 === "1") ? 1 : 0;
+        updateLED();
+      }
+
+      // Mode (field4)
+      if (data.field4 !== null) {
+        mode = (data.field4 === "1") ? "auto" : "manual";
+        updateMode();
+      }
+    })
+    .catch(err => console.error("Error fetching:", err));
+}
+
+// --- Khóa nút 15s ---
+function lockButton(btnId) {
+  let btn = document.getElementById(btnId);
+  btn.disabled = true;
+  let oldText = btn.innerText;
+  let countdown = 15;
+  btn.innerText = oldText + ` (${countdown})`;
+  btn.style.opacity = 0.5;
+  btn.style.cursor = "not-allowed";
+
+  let timer = setInterval(() => {
+    countdown--;
+    if (countdown > 0) {
+      btn.innerText = oldText + ` (${countdown})`;
+    } else {
+      clearInterval(timer);
+      btn.disabled = false;
+      btn.innerText = oldText;
+      btn.style.opacity = 1;
+      btn.style.cursor = "pointer";
+    }
+  }, 1000);
+}
+
+// --- Đồng hồ ---
+function updateClock(){
+  let now = new Date();
+  let hours = String(now.getHours()).padStart(2,'0');
+  let minutes = String(now.getMinutes()).padStart(2,'0');
+  let seconds = String(now.getSeconds()).padStart(2,'0');
+  let date = now.getDate()+'/'+(now.getMonth()+1)+'/'+now.getFullYear();
+  document.getElementById('clock-date').innerText ='Ngày hôm nay: ' + date;
+  document.getElementById('clock').innerText = 'Giờ hiện tại: ' + hours+':'+minutes+':'+seconds;
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// --- Gọi API ThingSpeak mỗi 5 giây để đồng bộ ---
+setInterval(fetchThingSpeak, 5000);
+fetchThingSpeak();
+</script>
+</body>
+</html>
