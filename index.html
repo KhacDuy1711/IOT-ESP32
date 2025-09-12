@@ -66,14 +66,14 @@ function toggleLED() {
   if(mode === 'manual') {
     ledState = ledState ? 0 : 1;
     updateLED();
-    sendToThingSpeak("field1", ledState);
+    sendToThingSpeak("field3", ledState);
   }
 }
 
 function toggleMode() {
   mode = (mode === 'manual') ? 'auto' : 'manual';
   updateMode();
-  sendToThingSpeak("field2", mode === 'auto' ? 1 : 0); // ví dụ field2 lưu chế độ
+  sendToThingSpeak("field4", mode === 'auto' ? 1 : 0); // ví dụ field2 lưu chế độ
 }
 
 function updateLED() {
