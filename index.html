@@ -54,26 +54,30 @@ let mode = 'manual';
 let writeAPI = "GRCJC30IIGGHI4SX"; // <-- Thay bằng WRITE API KEY của bạn
 let channelID = "2637039";
 
-// Hàm gửi dữ liệu lên ThingSpeak
-function sendToThingSpeak(field, value) {
+// Hàm gửi dữ liệu lên ThingSpeak (có khóa nút 15s)
+function sendToThingSpeak(field, value, btnId) {
   let url = `https://api.thingspeak.com/update?api_key=${writeAPI}&${field}=${value}`;
   fetch(url).then(r => r.text()).then(data => {
     console.log("ThingSpeak response:", data);
+    if (data === "0") {
+      alert("⚠️ Gửi thất bại (giới hạn 15s của ThingSpeak). Thử lại sau.");
+    }
   });
+  if (btnId) lockButton(btnId);
 }
 
 function toggleLED() {
   if(mode === 'manual') {
     ledState = ledState ? 0 : 1;
     updateLED();
-    sendToThingSpeak("field3", ledState);
+    sendToThingSpeak("field3", ledState, "toggleBtn");
   }
 }
 
 function toggleMode() {
   mode = (mode === 'manual') ? 'auto' : 'manual';
   updateMode();
-  sendToThingSpeak("field4", mode === 'auto' ? 1 : 0); // ví dụ field2 lưu chế độ
+  sendToThingSpeak("field4", mode === 'auto' ? 1 : 0, "modeBtn");
 }
 
 function updateLED() {
@@ -105,6 +109,30 @@ function updateMode() {
     toggleBtn.style.opacity=1;
     toggleBtn.style.cursor='pointer';
   }
+}
+
+// Khóa nút 15s để tránh gửi liên tục
+function lockButton(btnId) {
+  let btn = document.getElementById(btnId);
+  btn.disabled = true;
+  let oldText = btn.innerText;
+  let countdown = 15;
+  btn.innerText = oldText + ` (${countdown})`;
+  btn.style.opacity = 0.5;
+  btn.style.cursor = "not-allowed";
+
+  let timer = setInterval(() => {
+    countdown--;
+    if (countdown > 0) {
+      btn.innerText = oldText + ` (${countdown})`;
+    } else {
+      clearInterval(timer);
+      btn.disabled = false;
+      btn.innerText = oldText;
+      btn.style.opacity = 1;
+      btn.style.cursor = "pointer";
+    }
+  }, 1000);
 }
 
 function updateClock(){
