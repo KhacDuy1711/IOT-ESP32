@@ -12,7 +12,17 @@
 <style>
 body {font-family: Arial, sans-serif; background: linear-gradient(45deg, #0081C2,#042F60, #0081C2); margin:0;min-height: 100vh; background-attachment: fixed;background-size: cover;padding:20px; color:#333;}
 .container {display:grid; grid-template-columns: 1fr 1fr; gap:20px; max-width:1200px; margin:auto;}
-.card { background:white; border: none;align-items: center; border-radius:20px; padding:20px; box-shadow: -5px 5px 0px #6E8FFF; margin-bottom:20px;}
+.card { background:white; border: none;align-items: center; border-radius:20px; padding:20px; box-shadow: -5px 5px 0px #6E8FFF; margin-bottom:20px; animation: slideUp 0.8s ease-out;}
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 .btn {font-size:16px; padding:10px 18px; border:none; border-radius:8px; cursor:pointer; transition:0.3s;}
 #toggleBtn1 {background:#28a745; color:black;}
 #toggleBtn1.on {background:#8B0000; color:white;}
@@ -78,7 +88,9 @@ img {width: 50%;border-radius: 15px;align-items: center;}
       <h2>🏫 Trường ĐH Công nghiệp IUH</h2>
       <img src='https://rubee.com.vn/wp-content/uploads/2021/05/Logo-IUH.jpg' alt='IUH' align-items: center>
     </div>
-    <button class="btn" style="background:#f44336;color:white;" onclick="logout()">Đăng xuất</button>
+    <div class='card'>
+      <button class="btn" style="background:#f44336;color:white;" onclick="logout()">Đăng xuất</button>
+    </div>
   </div>
 </div>
 </div>
