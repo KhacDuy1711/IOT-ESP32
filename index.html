@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
+<script>
+  if (sessionStorage.getItem("authenticated") !== "1") {
+    window.location.href = "login.html";
+  }
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IOT</title>
@@ -9,9 +14,14 @@ body {font-family: Arial, sans-serif; background: linear-gradient(45deg, #0081C2
 .container {display:grid; grid-template-columns: 1fr 1fr; gap:20px; max-width:1200px; margin:auto;}
 .card { background:white; border: none;align-items: center; border-radius:20px; padding:20px; box-shadow: -5px 5px 0px #6E8FFF; margin-bottom:20px;}
 .btn {font-size:16px; padding:10px 18px; border:none; border-radius:8px; cursor:pointer; transition:0.3s;}
-#toggleBtn {background:#28a745; color:black;}
-#toggleBtn.on {background:#8B0000; color:white;}
+#toggleBtn1 {background:#28a745; color:black;}
+#toggleBtn1.on {background:#8B0000; color:white;}
+#toggleBtn2 {background:#28a745; color:black;}
+#toggleBtn2.on {background:#8B0000; color:white;}
+#toggleBtn3 {background:#28a745; color:black;}
+#toggleBtn3.on {background:#8B0000; color:white;}
 #toggleBtn:hover {opacity:0.85;}
+#saveTimeBtn {background:#28a745; color:black;}
 #modeBtn {background:#2196F3; color:white;}
 #modeBtn.auto {background:orange;}
 iframe {width:100%; height:240px; border:none;align-items: center; border-radius:10px; margin-top:10px;}
@@ -29,18 +39,32 @@ img {width: 50%;border-radius: 15px;align-items: center;}
       <div id='clock'>Loading time...</div>
     </div>
     <div class='card'>
-      <h2>💡 Điều khiển LED</h2>
-      <p>Trạng thái LED: <span id='state'>OFF</span></p>
-      <button id='toggleBtn' class='btn' onclick='toggleLED()'>Nhấn để bật / tắt</button>
-    </div>
-    <div class='card'>
       <h2>⚙️ Mode</h2>
       <p>Chế độ: <span id='modeState'>Manual</span></p>
       <button id='modeBtn' class='btn' onclick='toggleMode()'>Nhấn để đổi Mode</button>
     </div>
+    <div id="autoSettings" class="card" style="display:none;">
+      <h3>🕓 Cài đặt thời gian Auto</h3>
+      <div class="time-row">
+        <label>⏰ Thời gian BẬT LED (HHMM):</label>
+        <input type="text" id="startTime" maxlength="4" placeholder="VD: 1830"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      </div>
+      <div class="time-row">
+        <label>💤 Thời gian TẮT LED (HHMM):</label>
+        <input type="text" id="stopTime" maxlength="4" placeholder="VD: 2230"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      </div>
+      <button id="saveTimeBtn" class="btn" onclick="sendTimeToThingSpeak()">💾 Gửi thời gian</button>
+    </div>
     <div class='card'>
-      <h2>🏫 Trường ĐH Công nghiệp IUH</h2>
-      <img src='https://rubee.com.vn/wp-content/uploads/2021/05/Logo-IUH.jpg' alt='IUH' align-items: center>
+      <h2>💡 Điều khiển LED</h2>
+      <p>Trạng thái LED 1: <span id='state1'>Đã Tắt</span></p>
+      <button id='toggleBtn1' class='btn' onclick='toggleLED1()'>Nhấn để bật / tắt</button>
+      <p>Trạng thái LED 2: <span id='state2'>Đã Tắt</span></p>
+      <button id='toggleBtn2' class='btn' onclick='toggleLED2()'>Nhấn để bật / tắt</button>
+      <p>Trạng thái LED 3: <span id='state3'>Đã Tắt</span></p>
+      <button id='toggleBtn3' class='btn' onclick='toggleLED3()'>Nhấn để bật / tắt</button>
     </div>
   </div>
   <div>
@@ -50,11 +74,19 @@ img {width: 50%;border-radius: 15px;align-items: center;}
     <div class='card'>
       <iframe src='https://thingspeak.com/channels/2637039/charts/2?bgcolor=%23ffffff&color=%23009688&dynamic=true&results=30&title=%C4%90%E1%BB%99+%E1%BA%A9m&type=line'></iframe>
     </div>
+    <div class='card'>
+      <h2>🏫 Trường ĐH Công nghiệp IUH</h2>
+      <img src='https://rubee.com.vn/wp-content/uploads/2021/05/Logo-IUH.jpg' alt='IUH' align-items: center>
+    </div>
+    <button class="btn" style="background:#f44336;color:white;" onclick="logout()">Đăng xuất</button>
   </div>
+</div>
 </div>
 
 <script>
-let ledState = 0;
+let ledState1 = 0;
+let ledState2 = 0;
+let ledState3 = 0;
 let mode = 'manual';
 
 // --- API KEY + Channel ---
@@ -74,12 +106,30 @@ function sendToThingSpeak(field, value, btnId) {
   if (btnId) lockButton(btnId);
 }
 
-// --- Toggle LED ---
-function toggleLED() {
+// --- Toggle LED 1 ---
+function toggleLED1() {
   if(mode === 'manual') {
-    ledState = ledState ? 0 : 1;
-    updateLED();
-    sendToThingSpeak("field3", ledState, "toggleBtn");
+    ledState1 = ledState1 ? 0 : 1;
+    updateLED1();
+    sendToThingSpeak("field1", ledState1, "toggleBtn1");
+  }
+}
+
+// --- Toggle LED 2 ---
+function toggleLED2() {
+  if(mode === 'manual') {
+    ledState2 = ledState2 ? 0 : 1;
+    updateLED2();
+    sendToThingSpeak("field2", ledState2, "toggleBtn2");
+  }
+}
+
+// --- Toggle LED 3 ---
+function toggleLED3() {
+  if(mode === 'manual') {
+    ledState3 = ledState3 ? 0 : 1;
+    updateLED3();
+    sendToThingSpeak("field3", ledState3, "toggleBtn3");
   }
 }
 
@@ -91,10 +141,36 @@ function toggleMode() {
 }
 
 // --- Cập nhật LED UI ---
-function updateLED() {
-  let btn=document.getElementById('toggleBtn');
-  let state=document.getElementById('state');
-  if(ledState){
+function updateLED1() {
+  let btn=document.getElementById('toggleBtn1');
+  let state=document.getElementById('state1');
+  if(ledState1){
+    state.innerText='Đã Bật';
+    btn.classList.add('on');
+  } else {
+    state.innerText='Đã Tắt';
+    btn.classList.remove('on');
+  }
+}
+
+// --- Cập nhật LED UI ---
+function updateLED2() {
+  let btn=document.getElementById('toggleBtn2');
+  let state=document.getElementById('state2');
+  if(ledState2){
+    state.innerText='Đã Bật';
+    btn.classList.add('on');
+  } else {
+    state.innerText='Đã Tắt';
+    btn.classList.remove('on');
+  }
+}
+
+// --- Cập nhật LED UI ---
+function updateLED3() {
+  let btn=document.getElementById('toggleBtn3');
+  let state=document.getElementById('state3');
+  if(ledState3){
     state.innerText='Đã Bật';
     btn.classList.add('on');
   } else {
@@ -105,22 +181,60 @@ function updateLED() {
 
 // --- Cập nhật Mode UI ---
 function updateMode() {
-  let btn=document.getElementById('modeBtn');
-  let state=document.getElementById('modeState');
-  let toggleBtn=document.getElementById('toggleBtn');
-  if(mode==='auto'){
-    state.innerText='Auto';
+  let btn = document.getElementById('modeBtn');
+  let state = document.getElementById('modeState');
+  let toggleBtn1 = document.getElementById('toggleBtn1');
+  let toggleBtn2 = document.getElementById('toggleBtn2');
+  let toggleBtn3 = document.getElementById('toggleBtn3');
+
+  if (mode === 'auto') {
+    state.innerText = 'Auto';
     btn.classList.add('auto');
-    toggleBtn.disabled=true;
-    toggleBtn.style.opacity=0.5;
-    toggleBtn.style.cursor='not-allowed';
+    autoSettings.style.display = 'block'; // hiện phần nhập giờ
+
+    // Khóa 3 nút LED
+    [toggleBtn1, toggleBtn2, toggleBtn3].forEach(b => {
+      b.disabled = true;
+      b.style.opacity = 0.5;
+      b.style.cursor = 'not-allowed';
+    });
+
   } else {
-    state.innerText='Manual';
+    state.innerText = 'Manual';
     btn.classList.remove('auto');
-    toggleBtn.disabled=false;
-    toggleBtn.style.opacity=1;
-    toggleBtn.style.cursor='pointer';
+    autoSettings.style.display = 'none'; // ẩn phần nhập giờ
+
+    // Mở khóa 3 nút LED
+    [toggleBtn1, toggleBtn2, toggleBtn3].forEach(b => {
+      b.disabled = false;
+      b.style.opacity = 1;
+      b.style.cursor = 'pointer';
+    });
   }
+}
+
+function sendTimeToThingSpeak() {
+  let startTime = document.getElementById("startTime").value.trim();
+  let stopTime  = document.getElementById("stopTime").value.trim();
+
+  // Kiểm tra hợp lệ (đủ 4 số)
+  if (startTime.length !== 4 || stopTime.length !== 4) {
+    alert("⚠️ Vui lòng nhập đủ 4 chữ số cho cả hai thời gian!");
+    return;
+  }
+
+  // Ghép thành 8 số (VD: 18302230)
+  let timeData = startTime + stopTime;
+
+  let url = `https://api.thingspeak.com/update?api_key=${writeAPI}&field5=${timeData}`;
+  
+  fetch(url)
+    .then(res => res.text())
+    .then(data => {
+      if (data === "0") alert("⚠️ Gửi thất bại (do giới hạn 15s).");
+      else alert(`✅ Đã gửi thành công: ${timeData}`);
+    })
+    .catch(err => alert("❌ Lỗi khi gửi: " + err));
 }
 
 // --- Đọc trạng thái mới nhất từ ThingSpeak ---
@@ -131,10 +245,22 @@ function fetchThingSpeak() {
     .then(data => {
       console.log("ThingSpeak data:", data);
 
+      // LED state (field1)
+      if (data.field1 !== null) {
+        ledState1 = (data.field1 === "1") ? 1 : 0;
+        updateLED1();
+      }
+
+           // LED state (field3)
+      if (data.field2 !== null) {
+        ledState2 = (data.field2 === "1") ? 1 : 0;
+        updateLED2();
+      }
+
       // LED state (field3)
       if (data.field3 !== null) {
-        ledState = (data.field3 === "1") ? 1 : 0;
-        updateLED();
+        ledState3 = (data.field3 === "1") ? 1 : 0;
+        updateLED3();
       }
 
       // Mode (field4)
@@ -168,6 +294,11 @@ function lockButton(btnId) {
       btn.style.cursor = "pointer";
     }
   }, 1000);
+}
+
+function logout() {
+  sessionStorage.clear();
+  window.location.href = "login.html";
 }
 
 // --- Đồng hồ ---
